@@ -1,4 +1,4 @@
-# LeetCode Daily Challenge Tracker - Backend
+# LeetCode Daily Challenge Tracker - Backend 
 
 A production-ready backend application for tracking LeetCode daily challenges with automated evaluation, streak tracking, and penalty management.
 
