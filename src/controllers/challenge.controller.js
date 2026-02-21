@@ -33,6 +33,10 @@ const validateCreateChallenge = [
     .optional()
     .isFloat({ min: 0 })
     .withMessage("Penalty amount must be a non-negative number"),
+  body("visibility")
+    .optional()
+    .isIn(["PUBLIC", "PRIVATE"])
+    .withMessage("Visibility must be either PUBLIC or PRIVATE"),
   body("startDate")
     .isISO8601()
     .withMessage("Start date must be a valid ISO 8601 date"),

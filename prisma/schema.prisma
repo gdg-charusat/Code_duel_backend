@@ -45,6 +45,7 @@ model Challenge {
   startDate               DateTime
   endDate                 DateTime
   status                  ChallengeStatus    @default(PENDING)
+  visibility              ChallengeVisibility @default(PUBLIC)
   
   createdAt               DateTime           @default(now())
   updatedAt               DateTime           @updatedAt
@@ -170,28 +171,7 @@ enum ChallengeStatus {
   CANCELLED
 }
 
-enum InviteStatus {
-  PENDING
-  ACCEPTED
-  REJECTED
-}
-
-model ChallengeInvite {
-  id            String       @id @default(uuid())
-  challengeId   String
-  inviterId     String
-  inviteeId     String
-  status        InviteStatus @default(PENDING)
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
-
-  // Relations
-  challenge     Challenge    @relation(fields: [challengeId], references: [id], onDelete: Cascade)
-  inviter       User         @relation("InviteSender", fields: [inviterId], references: [id], onDelete: Cascade)
-  invitee       User         @relation("InviteReceiver", fields: [inviteeId], references: [id], onDelete: Cascade)
-
-  @@unique([challengeId, inviteeId])
-  @@index([inviteeId])
-  @@index([challengeId])
-  @@map("challenge_invites")
+enum ChallengeVisibility {
+  PUBLIC
+  PRIVATE
 }

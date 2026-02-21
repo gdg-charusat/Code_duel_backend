@@ -16,6 +16,7 @@ const createChallenge = async (userId, challengeData) => {
     difficultyFilter,
     uniqueProblemConstraint,
     penaltyAmount,
+    visibility,
     startDate,
     endDate,
   } = challengeData;
@@ -46,6 +47,16 @@ const createChallenge = async (userId, challengeData) => {
     );
   }
 
+  // Validate visibility
+  const validVisibilities = ["PUBLIC", "PRIVATE"];
+  const challengeVisibility = visibility || "PUBLIC";
+  if (!validVisibilities.includes(challengeVisibility)) {
+    throw new AppError(
+      `Invalid visibility: ${challengeVisibility}. Must be PUBLIC or PRIVATE`,
+      400
+    );
+  }
+
   // Create challenge
   const challenge = await prisma.challenge.create({
     data: {
@@ -56,6 +67,7 @@ const createChallenge = async (userId, challengeData) => {
       difficultyFilter,
       uniqueProblemConstraint: uniqueProblemConstraint !== false,
       penaltyAmount: penaltyAmount || 0,
+      visibility: challengeVisibility,
       startDate: start,
       endDate: end,
       status: "PENDING",
@@ -80,7 +92,7 @@ const createChallenge = async (userId, challengeData) => {
   });
 
   logger.info(
-    `Challenge created: ${challenge.name} by ${challenge.owner.username}`
+    `Challenge created: ${challenge.name} by ${challenge.owner.username} (${challengeVisibility})`
   );
 
   return challenge;
@@ -91,6 +103,7 @@ const createChallenge = async (userId, challengeData) => {
  * @param {string} challengeId - Challenge ID
  * @param {string} userId - Requesting user ID (optional)
  * @returns {Object} Challenge details
+ * @throws {AppError} If challenge is not found or access is denied due to visibility
  */
 const getChallengeById = async (challengeId, userId = null) => {
   const challenge = await prisma.challenge.findUnique({
@@ -125,6 +138,17 @@ const getChallengeById = async (challengeId, userId = null) => {
 
   if (!challenge) {
     throw new AppError("Challenge not found", 404);
+  }
+
+  // Check visibility rules
+  // If challenge is PRIVATE, only owner and accepted members can view it
+  if (challenge.visibility === "PRIVATE") {
+    const isOwner = userId && challenge.ownerId === userId;
+    const isMember = userId && challenge.members.some((m) => m.userId === userId);
+
+    if (!isOwner && !isMember) {
+      throw new AppError("This private challenge is not accessible to you", 403);
+    }
   }
 
   return challenge;
@@ -212,36 +236,71 @@ const getUserChallenges = async (userId, filters = {}) => {
     where.status = status;
   }
 
-  // Filter by owned vs joined
+  // Determine the query based on owned filter
+  let query;
+
   if (owned === "true") {
+    // User owns the challenge
     where.ownerId = userId;
-  } else {
-    where.members = {
-      some: {
-        userId,
+    query = prisma.challenge.findMany({
+      where,
+      include: {
+        owner: {
+          select: {
+            id: true,
+            username: true,
+          },
+        },
+        _count: {
+          select: {
+            members: true,
+          },
+        },
       },
-    };
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+  } else {
+    // User is a member of the challenge
+    // This query returns challenges where:
+    // 1. User is a member (regardless of visibility)
+    // 2. All public challenges
+    where.OR = [
+      {
+        members: {
+          some: {
+            userId,
+          },
+        },
+      },
+      {
+        visibility: "PUBLIC",
+      },
+    ];
+
+    query = prisma.challenge.findMany({
+      where,
+      include: {
+        owner: {
+          select: {
+            id: true,
+            username: true,
+          },
+        },
+        _count: {
+          select: {
+            members: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
   }
 
-  const challenges = await prisma.challenge.findMany({
-    where,
-    include: {
-      owner: {
-        select: {
-          id: true,
-          username: true,
-        },
-      },
-      _count: {
-        select: {
-          members: true,
-        },
-      },
-    },
-    orderBy: {
-      createdAt: "desc",
-    },
-  });
+  const challenges = await query;
 
   return challenges;
 };
