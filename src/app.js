@@ -21,7 +21,7 @@ const createApp = () => {
     cors({
       origin: config.corsOrigin,
       credentials: true,
-    })
+    }),
   );
 
   // Body parser middleware
@@ -58,6 +58,7 @@ const createApp = () => {
       endpoints: {
         auth: "/api/auth",
         challenges: "/api/challenges",
+        invites: "/api/challenges/:id/invite",
         dashboard: "/api/dashboard",
         health: "/health",
       },

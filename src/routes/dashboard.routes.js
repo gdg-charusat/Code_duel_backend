@@ -25,7 +25,7 @@ router.get("/today", authenticate, dashboardController.getTodayStatus);
 router.get(
   "/challenge/:challengeId",
   authenticate,
-  dashboardController.getChallengeProgress
+  dashboardController.getChallengeProgress,
 );
 
 /**
@@ -36,7 +36,7 @@ router.get(
 router.get(
   "/challenge/:challengeId/leaderboard",
   authenticate,
-  dashboardController.getChallengeLeaderboard
+  dashboardController.getChallengeLeaderboard,
 );
 
 /**
@@ -47,7 +47,7 @@ router.get(
 router.get(
   "/activity-heatmap",
   authenticate,
-  dashboardController.getActivityHeatmap
+  dashboardController.getActivityHeatmap,
 );
 
 /**
@@ -58,6 +58,13 @@ router.get(
 router.get("/stats", authenticate, dashboardController.getStats);
 
 /**
+ * @route   GET /api/dashboard/invites
+ * @desc    Get pending invites for the current user
+ * @access  Private
+ */
+router.get("/invites", authenticate, dashboardController.getDashboardInvites);
+
+/**
  * @route   GET /api/dashboard/submission-chart
  * @desc    Get user's submission chart data for the last 30 days
  * @access  Private
@@ -65,7 +72,7 @@ router.get("/stats", authenticate, dashboardController.getStats);
 router.get(
   "/submission-chart",
   authenticate,
-  dashboardController.getSubmissionChart
+  dashboardController.getSubmissionChart,
 );
 
 module.exports = router;

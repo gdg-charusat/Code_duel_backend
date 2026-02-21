@@ -2,6 +2,7 @@ const { prisma } = require("../config/prisma");
 const evaluationService = require("../services/evaluation.service");
 const penaltyService = require("../services/penalty.service");
 const statsService = require("../services/stats.service");
+const inviteService = require("../services/invite.service");
 const { asyncHandler } = require("../middlewares/error.middleware");
 
 /**
@@ -54,7 +55,7 @@ const getDashboard = asyncHandler(async (req, res) => {
       // Get recent daily results (last 7 days)
       const recentResults = await evaluationService.getMemberDailyResults(
         membership.id,
-        7
+        7,
       );
 
       return {
@@ -75,12 +76,18 @@ const getDashboard = asyncHandler(async (req, res) => {
           submissionsCount: r.submissionsCount,
         })),
       };
-    })
+    }),
   );
+
+  // Get pending invites for the user
+  const pendingInvites = await inviteService.getPendingInvites(userId);
 
   res.status(200).json({
     success: true,
-    data: dashboardData,
+    data: {
+      challenges: dashboardData,
+      pendingInvites,
+    },
   });
 });
 
@@ -128,7 +135,7 @@ const getChallengeProgress = asyncHandler(async (req, res) => {
   // Get all daily results
   const dailyResults = await evaluationService.getMemberDailyResults(
     membership.id,
-    100
+    100,
   );
 
   // Get penalty history
@@ -209,7 +216,7 @@ const getChallengeLeaderboard = asyncHandler(async (req, res) => {
         totalDays,
         completionRate: completionRate.toFixed(2),
       };
-    })
+    }),
   );
 
   res.status(200).json({
@@ -273,7 +280,7 @@ const getTodayStatus = asyncHandler(async (req, res) => {
             }
           : null,
       };
-    })
+    }),
   );
 
   res.status(200).json({
@@ -327,6 +334,19 @@ const getSubmissionChart = asyncHandler(async (req, res) => {
   });
 });
 
+/**
+ * Get pending invites for the current user
+ * GET /api/dashboard/invites
+ */
+const getDashboardInvites = asyncHandler(async (req, res) => {
+  const invites = await inviteService.getPendingInvites(req.user.id);
+
+  res.status(200).json({
+    success: true,
+    data: invites,
+  });
+});
+
 module.exports = {
   getDashboard,
   getChallengeProgress,
@@ -335,4 +355,5 @@ module.exports = {
   getActivityHeatmap,
   getStats,
   getSubmissionChart,
+  getDashboardInvites,
 };
