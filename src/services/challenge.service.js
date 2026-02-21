@@ -1,6 +1,8 @@
 const { prisma } = require("../config/prisma");
 const { AppError } = require("../middlewares/error.middleware");
 const logger = require("../utils/logger");
+// variable so it can be changed accordingly
+const STREAK_WEIGHT = 5;
 
 /**
  * Create a new challenge
@@ -289,10 +291,116 @@ const updateChallengeStatus = async (challengeId, userId, newStatus) => {
   return updatedChallenge;
 };
 
+/**
+ * Get all the users for the active challenge 
+ * and sort 
+ * @param {string} challengeId - Challenge ID
+ * @param {string} userId - User ID
+ * @return {Array} All the users with user relevant data
+ */
+const getLeaderboard = async (challengeId, userId) => {
+  const challenge = await prisma.challenge.findUnique({
+    where: {
+      id: challengeId
+    }
+  })
+
+  if (!challenge) {
+    throw new AppError("Challenge not found", 404)
+  }
+
+  if (challenge.status === "PENDING") {
+    throw new AppError("Leaderboard not available for pending challenge", 400)
+  }
+
+  if (challenge.status === "CANCELLED") {
+    throw new AppError("Leaderboard not available for cancelled challenge", 400);
+  }
+
+
+  const membership = await prisma.challengeMember.findUnique({
+    where: {
+      challengeId_userId: {
+        challengeId,
+        userId
+      }
+    }
+  });
+
+
+  if (!membership) {
+    throw new AppError("You are not a member of this challenge", 403)
+  }
+
+
+  // get all members from the certain challenge
+  const members = await prisma.ChallengeMember.findMany({
+    where: {
+      challengeId,
+      isActive: true
+    }, include: {
+      user: {
+        select: {
+          id: true,
+          username: true,
+          leetcodeUsername: true
+        }
+      },
+      dailyResults: {
+        select: {
+          problemsSolved: true
+        }
+      }
+    }
+  })
+
+  // single value array so we can calculate based on number of problems solved
+  const leaderboard = members.map(member => {
+    const totalSolved = member.dailyResults.reduce(
+      (acc, day) => acc + day.problemsSolved.length,
+      0
+    );
+
+    const score = totalSolved + member.currentStreak * STREAK_WEIGHT - member.totalPenalties;
+
+    return {
+      userId: member.user.id,
+      username: member.user.username,
+      leetcodeUsername: member.user.leetcodeUsername,
+      totalSolved,
+      currentStreak: member.currentStreak,
+      totalPenalties: member.totalPenalties,
+      score
+    };
+  });
+
+  leaderboard.sort((a, b) => {
+    if (b.score !== a.score) {
+      return b.score - a.score;
+    }
+    return b.totalSolved - a.totalSolved;
+  });
+  let currentRank = 1;
+
+  const rankedLeaderboard = leaderboard.map((user, index) => {
+    if (index > 0 && (user.score < leaderboard[index - 1].score || user.totalSolved < leaderboard[index - 1].totalSolved)) {
+      currentRank = index + 1;
+    }
+
+    return {
+      rank: currentRank,
+      ...user
+    };
+  });
+
+  return rankedLeaderboard
+}
+
 module.exports = {
   createChallenge,
   getChallengeById,
   joinChallenge,
   getUserChallenges,
   updateChallengeStatus,
+  getLeaderboard
 };

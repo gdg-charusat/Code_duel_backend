@@ -143,6 +143,23 @@ const updateChallengeStatus = asyncHandler(async (req, res) => {
   });
 });
 
+/**
+ * Get all the users in from the active challenge and sort accordingly
+ * for leaderboard
+ * GET /api/challenges/:id/leaderboard
+ */
+const getLeaderboard = asyncHandler(async (req, res) => {
+  const { id } = req.params
+  
+  const leaderboard = await challengeService.getLeaderboard(id, req.user.id)
+
+  res.status(200).json({
+    success: true,
+    message: "Leaderboard for current challenege",
+    data: leaderboard
+  })
+})
+
 module.exports = {
   createChallenge,
   getChallengeById,
@@ -150,4 +167,5 @@ module.exports = {
   getUserChallenges,
   updateChallengeStatus,
   validateCreateChallenge,
+  getLeaderboard
 };

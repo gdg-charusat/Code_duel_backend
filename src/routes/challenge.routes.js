@@ -47,4 +47,12 @@ router.patch(
   challengeController.updateChallengeStatus
 );
 
+
+/**
+ * @route GET /api/challenges/:id/leaderboard 
+ * @desc Get the leaderboard for the current challenge with relevant user data
+ * @access Private
+ */
+router.get("/:id/leaderboard", authenticate, challengeController.getLeaderboard)
+
 module.exports = router;
