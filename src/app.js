@@ -9,6 +9,7 @@ const authRoutes = require("./routes/auth.routes");
 const challengeRoutes = require("./routes/challenge.routes");
 const dashboardRoutes = require("./routes/dashboard.routes");
 const leetcodeRoutes = require("./routes/leetcode.routes");
+const leaderboardRoutes = require("./routes/leaderboard.routes");
 
 /**
  * Initialize Express application
@@ -48,6 +49,7 @@ const createApp = () => {
   app.use("/api/challenges", challengeRoutes);
   app.use("/api/dashboard", dashboardRoutes);
   app.use("/api/leetcode", leetcodeRoutes);
+  app.use("/api/leaderboard", leaderboardRoutes);
 
   // Root endpoint
   app.get("/", (req, res) => {
@@ -59,6 +61,7 @@ const createApp = () => {
         auth: "/api/auth",
         challenges: "/api/challenges",
         dashboard: "/api/dashboard",
+        leaderboard: "/api/leaderboard",
         health: "/health",
       },
     });
