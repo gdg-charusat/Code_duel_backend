@@ -2,7 +2,7 @@
 
 A production-ready backend application for tracking LeetCode daily challenges with automated evaluation, streak tracking, and penalty management.
 
-## 🚀 Features
+## 🚀 Feature
 
 - **User Authentication**: JWT-based authentication with secure password hashing
 - **Challenge Management**: Create and join challenges with customizable rules
