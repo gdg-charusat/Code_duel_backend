@@ -259,11 +259,21 @@ const fetchSubmissionsForDate = async (
   date,
   sessionData = null
 ) => {
-
-  return await fetchUserSubmissions(
+  const submissions = await fetchUserSubmissions(
     leetcodeUsername,
     sessionData
   );
+
+  // Filter submissions to only include those from the specified date
+  const startOfDay = new Date(date);
+  startOfDay.setHours(0, 0, 0, 0);
+  const endOfDay = new Date(date);
+  endOfDay.setHours(23, 59, 59, 999);
+
+  return submissions.filter((sub) => {
+    const subDate = new Date(parseInt(sub.timestamp) * 1000);
+    return subDate >= startOfDay && subDate <= endOfDay;
+  });
 };
 
 /**
