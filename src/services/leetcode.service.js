@@ -123,14 +123,14 @@ const fetchUserSubmissions = async (
       }
     }
 
-    // Fetch recent submissions (up to 100)
+    // Fetch recent submissions (up to 100 to ensure date-range coverage)
     const response = await axios.post(
       config.leetcodeGraphqlUrl,
       {
         query: RECENT_SUBMISSIONS_QUERY,
         variables: {
           username: leetcodeUsername,
-          limit: 10,
+          limit: 100,
         },
       },
       { headers, timeout: 10000 }
@@ -260,10 +260,28 @@ const fetchSubmissionsForDate = async (
   sessionData = null
 ) => {
 
-  return await fetchUserSubmissions(
+  const allSubmissions = await fetchUserSubmissions(
     leetcodeUsername,
     sessionData
   );
+
+  // Calculate start/end of the target date
+  const dayStart = new Date(date);
+  dayStart.setHours(0, 0, 0, 0);
+  const dayEnd = new Date(date);
+  dayEnd.setHours(23, 59, 59, 999);
+
+  // Filter submissions to only those within the target date
+  const filtered = allSubmissions.filter((sub) => {
+    const subDate = new Date(parseInt(sub.timestamp) * 1000);
+    return subDate >= dayStart && subDate <= dayEnd;
+  });
+
+  logger.info(
+    `[fetchSubmissionsForDate] User: ${leetcodeUsername} | Date: ${dayStart.toISOString().split('T')[0]} | Fetched: ${allSubmissions.length} | After date filter: ${filtered.length}`
+  );
+
+  return filtered;
 };
 
 /**

@@ -90,6 +90,24 @@ const evaluateChallenge = async (challenge, evaluationDate) => {
 const evaluateMember = async (challenge, member, evaluationDate) => {
   const user = member.user;
 
+  // Guard: skip if this member+challenge+date was already evaluated
+  const existingResult = await prisma.dailyResult.findUnique({
+    where: {
+      challengeId_memberId_date: {
+        challengeId: challenge.id,
+        memberId: member.id,
+        date: evaluationDate,
+      },
+    },
+  });
+
+  if (existingResult) {
+    logger.info(
+      `Skipping ${user.username} — already evaluated for ${evaluationDate.toISOString().split('T')[0]}`
+    );
+    return;
+  }
+
   // Check if user has LeetCode username
   if (!user.leetcodeUsername) {
     logger.warn(`User ${user.username} doesn't have a LeetCode username set`);
@@ -223,7 +241,7 @@ const evaluateMember = async (challenge, member, evaluationDate) => {
 };
 
 /**
- * Create a daily result record
+ * Create or update a daily result record (upsert to handle duplicate runs)
  */
 const createDailyResult = async (
   challengeId,
@@ -234,8 +252,22 @@ const createDailyResult = async (
   problemsSolved,
   metadata = {}
 ) => {
-  return await prisma.dailyResult.create({
-    data: {
+  return await prisma.dailyResult.upsert({
+    where: {
+      challengeId_memberId_date: {
+        challengeId,
+        memberId,
+        date,
+      },
+    },
+    update: {
+      completed,
+      submissionsCount,
+      problemsSolved,
+      evaluatedAt: new Date(),
+      metadata,
+    },
+    create: {
       challengeId,
       memberId,
       date,
