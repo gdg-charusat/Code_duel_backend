@@ -70,6 +70,65 @@ const templates = {
   }),
 
   /**
+   * Password reset email template
+   */
+  passwordReset: (username, resetUrl) => ({
+    subject: "Reset Your Code Duel Password 🔐",
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+          .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+          .button { display: inline-block; background: #667eea; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; text-align: center; }
+          .warning { background: #fff3cd; border: 1px solid #ffc107; border-radius: 5px; padding: 15px; margin: 20px 0; color: #856404; }
+          .footer { text-align: center; color: #888; font-size: 12px; margin-top: 20px; }
+          .link-text { word-break: break-all; color: #667eea; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>Password Reset Request 🔐</h1>
+          </div>
+          <div class="content">
+            <h2>Hi ${username}!</h2>
+            <p>We received a request to reset your Code Duel account password. If you made this request, click the button below to set a new password.</p>
+            
+            <center>
+              <a href="${resetUrl}" class="button">Reset Password</a>
+            </center>
+            
+            <p style="text-align: center; margin-top: 20px;">
+              Or copy and paste this link in your browser:<br>
+              <span class="link-text">${resetUrl}</span>
+            </p>
+            
+            <div class="warning">
+              <strong>⏰ Important:</strong> This link will expire in 1 hour for security reasons.
+            </div>
+            
+            <div class="warning">
+              <strong>🔒 Security Note:</strong> If you didn't request a password reset, you can ignore this email. Your password won't change unless you click the link above.
+            </div>
+            
+            <p>Need help? Contact our support team.</p>
+            
+            <p>Best regards,<br><strong>The Code Duel Team</strong></p>
+          </div>
+          <div class="footer">
+            <p>© ${new Date().getFullYear()} Code Duel. All rights reserved.</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `,
+  }),
+
+  /**
    * Daily streak reminder template
    */
   streakReminder: (username, currentStreak, challengeName) => ({
@@ -281,6 +340,31 @@ const sendWelcomeEmail = async (email, username) => {
     return result;
   } catch (error) {
     logger.error(`Failed to send welcome email to ${email}:`, error);
+    return { success: false, reason: error.message };
+  }
+};
+
+/**
+ * Send password reset email
+ * @param {string} email - User email
+ * @param {string} username - Username
+ * @param {string} resetUrl - Password reset URL
+ */
+const sendPasswordResetEmail = async (email, username, resetUrl) => {
+  try {
+    const template = templates.passwordReset(username, resetUrl);
+    const result = await sendEmail({
+      to: email,
+      subject: template.subject,
+      html: template.html,
+    });
+
+    if (result.success) {
+      logger.info(`Password reset email sent to ${email}`);
+    }
+    return result;
+  } catch (error) {
+    logger.error(`Failed to send password reset email to ${email}:`, error);
     return { success: false, reason: error.message };
   }
 };
@@ -565,6 +649,7 @@ const getLeaderboardRank = async (challengeId, memberId) => {
 
 module.exports = {
   sendWelcomeEmail,
+  sendPasswordResetEmail,
   sendStreakReminder,
   sendStreakBrokenNotification,
   sendWeeklySummary,

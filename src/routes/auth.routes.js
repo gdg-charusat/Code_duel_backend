@@ -35,4 +35,26 @@ router.get("/profile", authenticate, authController.getProfile);
  */
 router.put("/profile", authenticate, authController.updateProfile);
 
+/**
+ * @route   POST /api/auth/forgot-password
+ * @desc    Request password reset email
+ * @access  Public
+ */
+router.post(
+  "/forgot-password",
+  authController.validateForgotPassword,
+  authController.forgotPassword
+);
+
+/**
+ * @route   POST /api/auth/reset-password
+ * @desc    Reset password with token
+ * @access  Public
+ */
+router.post(
+  "/reset-password",
+  authController.validateResetPassword,
+  authController.resetPassword
+);
+
 module.exports = router;

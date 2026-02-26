@@ -1,9 +1,11 @@
 const bcrypt = require("bcryptjs");
 const { prisma } = require("../config/prisma");
-const { generateToken } = require("../utils/jwt");
+const { generateToken, verifyToken } = require("../utils/jwt");
 const { AppError } = require("../middlewares/error.middleware");
 const logger = require("../utils/logger");
-const { sendWelcomeEmail } = require("./email.service");
+const { sendWelcomeEmail, sendPasswordResetEmail } = require("./email.service");
+const jwt = require("jsonwebtoken");
+const { config } = require("../config/env");
 
 /**
  * Register a new user
@@ -210,9 +212,146 @@ const updateProfile = async (userId, updateData) => {
   return updatedUser;
 };
 
+/**
+ * Request password reset
+ * @param {string} email - User email
+ * @returns {Object} Message confirming reset email sent
+ */
+const forgotPassword = async (email) => {
+  // Find user by email
+  const user = await prisma.user.findUnique({
+    where: { email },
+  });
+
+  // For security, we don't reveal whether the email exists
+  // But we only send email if user exists
+  if (!user) {
+    // Return success anyway for security
+    logger.info(`Password reset requested for non-existent email: ${email}`);
+    return {
+      message: "If an account exists with this email, you will receive a password reset link.",
+    };
+  }
+
+  // Generate reset token (expires in 1 hour)
+  const resetToken = jwt.sign(
+    { userId: user.id, type: "password_reset" },
+    config.jwtSecret,
+    { expiresIn: "1h" }
+  );
+
+  // Store token in database with expiry
+  const expiresAt = new Date(Date.now() + 3600000); // 1 hour from now
+
+  await prisma.passwordResetToken.create({
+    data: {
+      userId: user.id,
+      token: resetToken,
+      expiresAt,
+    },
+  });
+
+  // Send reset email
+  const resetUrl = `${process.env.FRONTEND_URL || "http://localhost:5173"}/reset-password?token=${resetToken}`;
+
+  await sendPasswordResetEmail(user.email, user.username, resetUrl).catch((err) => {
+    logger.error(`Failed to send password reset email: ${err.message}`);
+  });
+
+  logger.info(`Password reset requested for user: ${user.email}`);
+
+  return {
+    message: "If an account exists with this email, you will receive a password reset link.",
+  };
+};
+
+/**
+ * Reset password using token
+ * @param {string} token - Password reset token
+ * @param {string} newPassword - New password
+ * @returns {Object} Success message
+ */
+const resetPassword = async (token, newPassword) => {
+  // Verify JWT token
+  let decoded;
+  try {
+    decoded = jwt.verify(token, config.jwtSecret);
+  } catch (error) {
+    throw new AppError("Invalid or expired reset link", 401);
+  }
+
+  // Check if token has the correct type
+  if (decoded.type !== "password_reset") {
+    throw new AppError("Invalid reset token", 401);
+  }
+
+  // Check if token exists in database and hasn't been used
+  const resetToken = await prisma.passwordResetToken.findUnique({
+    where: { token },
+  });
+
+  if (!resetToken) {
+    throw new AppError("Invalid or expired reset link", 401);
+  }
+
+  if (resetToken.usedAt) {
+    throw new AppError("This reset link has already been used", 401);
+  }
+
+  if (resetToken.expiresAt < new Date()) {
+    throw new AppError("Reset link has expired", 401);
+  }
+
+  if (resetToken.userId !== decoded.userId) {
+    throw new AppError("Invalid reset token", 401);
+  }
+
+  // Get user
+  const user = await prisma.user.findUnique({
+    where: { id: decoded.userId },
+  });
+
+  if (!user) {
+    throw new AppError("User not found", 404);
+  }
+
+  // Hash new password
+  const hashedPassword = await bcrypt.hash(newPassword, 12);
+
+  // Update password and mark token as used
+  const updatedUser = await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      password: hashedPassword,
+    },
+    select: {
+      id: true,
+      email: true,
+      username: true,
+      leetcodeUsername: true,
+    },
+  });
+
+  // Mark token as used
+  await prisma.passwordResetToken.update({
+    where: { token },
+    data: {
+      usedAt: new Date(),
+    },
+  });
+
+  logger.info(`Password reset successful for user: ${user.email}`);
+
+  return {
+    message: "Password reset successful",
+  };
+};
+
 module.exports = {
   register,
   login,
   getProfile,
   updateProfile,
+  forgotPassword,
+  resetPassword,
 };
