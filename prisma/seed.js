@@ -4,6 +4,14 @@ const bcryptjs = require("bcryptjs");
 const prisma = new PrismaClient();
 
 // Sample data
+const ADMIN_USER = {
+  email: "admin@codeduel.dev",
+  username: "admin",
+  password: "Admin@1234",
+  leetcodeUsername: null,
+  role: "ADMIN",
+};
+
 const USERS = [
   {
     email: "john.doe@example.com",
@@ -168,6 +176,26 @@ async function main() {
 
     // 1. Create Users
     console.log("👥 Creating users...");
+
+    // Create admin user first
+    const adminHashedPassword = await bcryptjs.hash(ADMIN_USER.password, 10);
+    const adminUser = await prisma.user.create({
+      data: {
+        email: ADMIN_USER.email,
+        username: ADMIN_USER.username,
+        password: adminHashedPassword,
+        leetcodeUsername: ADMIN_USER.leetcodeUsername,
+        role: ADMIN_USER.role,
+        emailPreferences: {
+          welcomeEmail: true,
+          streakReminder: true,
+          streakBroken: true,
+          weeklySummary: true,
+        },
+      },
+    });
+    console.log(`✅ Created admin user: ${adminUser.username}`);
+
     const users = await Promise.all(
       USERS.map(async (user) => {
         const hashedPassword = await bcryptjs.hash(user.password, 10);
@@ -392,8 +420,9 @@ async function main() {
     console.log(`   • Penalty Ledger Entries: ${penaltyLedgerEntries.length}`);
 
     console.log("\n📝 Sample Credentials for Testing:");
+    console.log(`   🔑 ADMIN: ${ADMIN_USER.username} / ${ADMIN_USER.password}`);
     users.forEach((user, index) => {
-      console.log(`   ${index + 1}. ${user.username} / ${user.password}`);
+      console.log(`   ${index + 1}. ${user.username} / ${USERS[index].password}`);
     });
   } catch (error) {
     console.error("❌ Error during seeding:", error);

@@ -51,6 +51,7 @@ const authenticate = async (req, res, next) => {
         id: true,
         email: true,
         username: true,
+        role: true,
         leetcodeUsername: true,
         createdAt: true,
       },
@@ -77,6 +78,37 @@ const authenticate = async (req, res, next) => {
 };
 
 /**
+ * Role-based access control middleware factory.
+ * Must be used after `authenticate`.
+ * @param {...string} roles - Allowed roles (e.g. 'ADMIN', 'USER')
+ */
+const requireRole = (...roles) => {
+  return (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: "Authentication required",
+      });
+    }
+
+    if (!roles.includes(req.user.role)) {
+      return res.status(403).json({
+        success: false,
+        message: "Access denied: insufficient permissions",
+      });
+    }
+
+    next();
+  };
+};
+
+/**
+ * Shorthand middleware that restricts access to ADMIN role only.
+ * Must be used after `authenticate`.
+ */
+const requireAdmin = requireRole("ADMIN");
+
+/**
  * Optional authentication middleware
  * Attaches user to request if token is valid, but doesn't require authentication
  */
@@ -95,6 +127,7 @@ const optionalAuthenticate = async (req, res, next) => {
             id: true,
             email: true,
             username: true,
+            role: true,
             leetcodeUsername: true,
             createdAt: true,
           },
@@ -135,4 +168,6 @@ module.exports = {
   authenticate,
   optionalAuthenticate,
   authorizeAdmin,
+  requireRole,
+  requireAdmin,
 };

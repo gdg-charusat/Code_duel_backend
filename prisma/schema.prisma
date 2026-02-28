@@ -28,6 +28,7 @@ model User {
   email             String             @unique
   username          String             @unique
   password          String
+  role              Role               @default(USER)
   passwordResetTokenHash String?
   passwordResetTokenExpiry DateTime?
   leetcodeUsername  String?
@@ -179,6 +180,11 @@ model TokenBlacklist {
   
   @@index([expiresAt])
   @@map("token_blacklist")
+}
+
+enum Role {
+  USER
+  ADMIN
 }
 
 enum ChallengeStatus {

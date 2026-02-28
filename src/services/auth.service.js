@@ -41,6 +41,14 @@ const register = async (userData) => {
       password: hashedPassword,
       leetcodeUsername: leetcodeUsername || null,
     },
+    select: {
+      id: true,
+      email: true,
+      username: true,
+      role: true,
+      leetcodeUsername: true,
+      createdAt: true,
+    },
   });
 
   // Generate JWT token
@@ -103,6 +111,7 @@ const login = async (emailOrUsername, password) => {
       id: user.id,
       email: user.email,
       username: user.username,
+      role: user.role,
       leetcodeUsername: user.leetcodeUsername,
       createdAt: user.createdAt,
     },
@@ -120,6 +129,7 @@ const getProfile = async (userId) => {
       id: true,
       email: true,
       username: true,
+      role: true,
       leetcodeUsername: true,
       createdAt: true,
       _count: {
