@@ -28,6 +28,7 @@ model User {
   email             String             @unique
   username          String             @unique
   password          String
+  role              Role               @default(USER)
   passwordResetTokenHash String?
   passwordResetTokenExpiry DateTime?
   leetcodeUsername  String?
@@ -42,13 +43,9 @@ model User {
   
 
   // Relations
-
-  dailySubmissions   DailySubmission[] @relation("UserDailySubmissions")
-  ownedChallenges    Challenge[]       @relation("ChallengeOwner")
-  memberships        ChallengeMember[]
-  challengeInvites  ChallengeInvite[]  @relation("InviteCreator")
+  ownedChallenges   Challenge[]        @relation("ChallengeOwner")
+  memberships       ChallengeMember[]
   
-
   @@map("users")
 }
 
@@ -70,9 +67,7 @@ model Challenge {
   dailySubmissions  DailySubmission[]    @relation("ChallengeDailySubmissions")
   members           ChallengeMember[]
   dailyResults            DailyResult[]
-  invites                 ChallengeInvite[]
   
-
   @@map("challenges")
 }
 
@@ -155,33 +150,9 @@ model ProblemMetadata {
   @@map("problem_metadata")
 }
 
-model ChallengeInvite {
-  id          String    @id @default(uuid())
-  challengeId String
-  code        String    @unique
-  createdBy   String
-  expiresAt   DateTime
-  maxUses     Int       @default(1)
-  usedCount   Int       @default(0)
-  createdAt   DateTime  @default(now())
-
-  // Relations
-  challenge   Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
-  creator     User      @relation("InviteCreator", fields: [createdBy], references: [id])
-
-  @@index([code])
-  @@index([challengeId])
-  @@map("challenge_invites")
-}
-
-model TokenBlacklist {
-  id                String           @id @default(uuid())
-  token             String           @unique
-  expiresAt         DateTime
-  createdAt         DateTime         @default(now())
-  
-  @@index([expiresAt])
-  @@map("token_blacklist")
+enum Role {
+  USER
+  ADMIN
 }
 
 enum ChallengeStatus {

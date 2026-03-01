@@ -17,6 +17,7 @@ const authRoutes = require("./routes/auth.routes");
 const challengeRoutes = require("./routes/challenge.routes");
 const dashboardRoutes = require("./routes/dashboard.routes");
 const leetcodeRoutes = require("./routes/leetcode.routes");
+const adminRoutes = require("./routes/admin.routes");
 const { apiLimiter, authLimiter } = require('./middlewares/rateLimiter.middleware');
 
 // Import security middlewares
@@ -85,6 +86,7 @@ const createApp = () => {
   app.use("/api/challenges", challengeRoutes);
   app.use("/api/dashboard", dashboardRoutes);
   app.use("/api/leetcode", leetcodeRoutes);
+  app.use("/api/admin", adminRoutes);
 
   // Root endpoint
   app.get("/", (req, res) => {
