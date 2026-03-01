@@ -2,7 +2,11 @@ const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
 const { prisma } = require("../config/prisma");
 const { config } = require("../config/env");
-const { generateToken, decodeToken } = require("../utils/jwt");
+const {
+  generateToken,
+  decodeToken,
+  createPasswordVersion,
+} = require("../utils/jwt");
 const { AppError } = require("../middlewares/error.middleware");
 const logger = require("../utils/logger");
 const { logAudit } = require("../utils/auditLogger");
@@ -48,6 +52,12 @@ const register = async (userData) => {
       emailVerificationToken: verificationToken,
       emailVerificationExpires: tokenExpiry,
     },
+  });
+
+  // Generate JWT token
+  const token = generateToken({
+    userId: user.id,
+    pwdv: createPasswordVersion(hashedPassword),
   });
 
   logger.info(`New user registered: ${user.username} (${user.email})`);
@@ -120,15 +130,11 @@ const login = async (emailOrUsername, password) => {
     throw new AppError("Invalid credentials", 401);
   }
 
-  if (!user.isEmailVerified) {
-  throw new AppError(
-    "Please verify your email before logging in.",
-    403
-  );
-}
-
   // Generate JWT token
-  const token = generateToken({ userId: user.id });
+  const token = generateToken({
+    userId: user.id,
+    pwdv: createPasswordVersion(user.password),
+  });
 
   logger.info(`User logged in: ${user.username}`);
 

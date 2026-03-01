@@ -1,4 +1,5 @@
 const jwt = require("jsonwebtoken");
+const crypto = require("crypto");
 const { config } = require("../config/env");
 
 /**
@@ -41,8 +42,23 @@ const decodeToken = (token) => {
   return jwt.decode(token);
 };
 
+/**
+ * Derive a stable token-bound password version from the stored hash.
+ * This changes whenever password hash changes, invalidating old tokens.
+ * @param {string} passwordHash - Bcrypt password hash from database
+ * @returns {string} Password version fingerprint
+ */
+const createPasswordVersion = (passwordHash) => {
+  return crypto
+    .createHmac("sha256", config.jwtSecret)
+    .update(passwordHash)
+    .digest("hex")
+    .slice(0, 24);
+};
+
 module.exports = {
   generateToken,
   verifyToken,
   decodeToken,
+  createPasswordVersion,
 };

@@ -1,7 +1,15 @@
-const { verifyToken } = require("../utils/jwt");
+const { verifyToken, createPasswordVersion } = require("../utils/jwt");
 const { prisma } = require("../config/prisma");
 const logger = require("../utils/logger");
 const authService = require("../services/auth.service");
+
+const isPasswordVersionValid = (decoded, passwordHash) => {
+  if (!decoded?.pwdv || !passwordHash) {
+    return false;
+  }
+
+  return decoded.pwdv === createPasswordVersion(passwordHash);
+};
 
 /**
  * Authentication middleware
@@ -52,6 +60,7 @@ const authenticate = async (req, res, next) => {
         email: true,
         username: true,
         leetcodeUsername: true,
+        password: true,
         createdAt: true,
       },
     });
@@ -63,8 +72,16 @@ const authenticate = async (req, res, next) => {
       });
     }
 
+    if (!isPasswordVersionValid(decoded, user.password)) {
+      return res.status(401).json({
+        success: false,
+        message: "Token is no longer valid. Please log in again.",
+      });
+    }
+
     // Attach user to request object
-    req.user = user;
+    const { password, ...safeUser } = user;
+    req.user = safeUser;
 
     next();
   } catch (error) {
@@ -96,12 +113,14 @@ const optionalAuthenticate = async (req, res, next) => {
             email: true,
             username: true,
             leetcodeUsername: true,
+            password: true,
             createdAt: true,
           },
         });
 
-        if (user) {
-          req.user = user;
+        if (user && isPasswordVersionValid(decoded, user.password)) {
+          const { password, ...safeUser } = user;
+          req.user = safeUser;
         }
       } catch (error) {
         // Token invalid, but we don't return error for optional auth
